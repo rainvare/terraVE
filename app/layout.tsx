@@ -5,14 +5,8 @@ import './globals.css'
 export const metadata: Metadata = {
   title: 'TerraVE — Inteligencia Territorial Post-Terremoto',
   description:
-    'Plataforma ciudadana para mapear y clasificar daño estructural en Venezuela. Memoria colectiva + Visión computacional.',
+    'Plataforma ciudadana para mapear y clasificar daño estructural en Venezuela.',
   keywords: ['Venezuela', 'terremoto', 'daño estructural', 'mapa', 'reconstrucción'],
-  openGraph: {
-    title: 'TerraVE',
-    description: '¿Qué existía aquí? ¿Qué quedó en pie?',
-    locale: 'es_VE',
-    type: 'website',
-  },
 }
 
 export default function RootLayout({
@@ -27,9 +21,12 @@ export default function RootLayout({
           href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap"
           rel="stylesheet"
         />
+        {/* Leaflet CSS — sin tarjeta, sin token */}
         <link
           rel="stylesheet"
-          href="https://api.mapbox.com/mapbox-gl-js/v3.2.0/mapbox-gl.css"
+          href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+          integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
+          crossOrigin=""
         />
       </head>
       <body className="bg-[#0D1B2A] text-white font-body antialiased">
