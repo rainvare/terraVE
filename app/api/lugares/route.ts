@@ -39,7 +39,7 @@ export async function GET(req: NextRequest) {
       query = query.eq('tipo', tipo)
     }
 
-    const { data, error } = await query.limit(500)
+    const { data, error } = await query.limit(5000)
 
     if (error) {
       console.error('Error obteniendo lugares:', error)
