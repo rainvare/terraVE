@@ -33,8 +33,8 @@ export async function GET(req: NextRequest) {
           created_at
         )
       `)
-      .order('created_at', { ascending: false })
-
+      .order('color_semaforo', { ascending: true }) 
+    
     if (tipo && tipo !== 'todos') {
       query = query.eq('tipo', tipo)
     }
