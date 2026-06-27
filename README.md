@@ -32,13 +32,7 @@ cp .env.example .env.local
 4. Pega y ejecuta el contenido de `supabase-schema.sql`
 5. Copia la URL y Anon Key en `.env.local`
 
-### 4. Configura Mapbox
-
-1. Crea cuenta en [mapbox.com](https://mapbox.com)
-2. Ve a Account → Tokens → Create a token
-3. Copia el token `pk.eyJ1...` en `.env.local`
-
-### 5. Configura Hugging Face
+### 4. Configura Hugging Face
 
 1. Crea cuenta en [huggingface.co](https://huggingface.co)
 2. Ve a Settings → Access Tokens → New token (Read)
@@ -105,7 +99,7 @@ git push origin main
 | Deploy | Vercel | Free |
 | DB | Supabase PostgreSQL + PostGIS | 500MB |
 | Storage | Supabase Storage | 1GB |
-| Mapa | Mapbox GL JS | 50k loads/mes |
+| Mapa | Leaflet + OpenStreetMap | Gratis|
 | IA | HF Inference API (ViT) | Free tier |
 | Auth | Supabase Auth | Free |
 
