@@ -17,12 +17,12 @@ const TIPO_ICONOS: Record<string, string> = {
   otro:     '📌',
 }
 
-const SEMAFORO_META: Record<ColorSemaforo, { label: string; bg: string; border: string }> = {
-  verde:     { label: 'Sin daño',   bg: '#27AE60', border: '#1E8449' },
-  amarillo:  { label: 'Daño menor', bg: '#F1C40F', border: '#D4AC0D' },
-  naranja:   { label: 'Daño mayor', bg: '#E67E22', border: '#CA6F1E' },
-  rojo:      { label: 'Destruido',  bg: '#E74C3C', border: '#CB4335' },
-  gris:      { label: 'Sin evaluar',bg: '#95A5A6', border: '#7F8C8D' },
+const SEMAFORO_META: Record<ColorSemaforo, { label: string; descripcion: string; bg: string; border: string }> = {
+  verde:    { label: 'Sin daño aparente',          descripcion: 'Estructura visualmente intacta.',                          bg: '#27AE60', border: '#1E8449' },
+  amarillo: { label: 'Pendiente de evaluación',    descripcion: 'Este lugar aún no ha sido evaluado. ¿Estás cerca?',        bg: '#F1C40F', border: '#D4AC0D' },
+  naranja:  { label: 'Posible daño estructural',   descripcion: 'Se han detectado daños. Se recomienda inspección.',         bg: '#E67E22', border: '#CA6F1E' },
+  rojo:     { label: 'Alerta de riesgo estructural', descripcion: 'Alta probabilidad de daño severo. No ingresar sin evaluación técnica.', bg: '#E74C3C', border: '#CB4335' },
+  gris:     { label: 'Sin evaluar',                descripcion: 'Sin datos disponibles aún.',                                bg: '#95A5A6', border: '#7F8C8D' },
 }
 
 export default function PlaceCard({ lugar, onClose }: Props) {
@@ -49,7 +49,7 @@ export default function PlaceCard({ lugar, onClose }: Props) {
           <span className="text-sm font-semibold" style={{ color: semaforo.bg }}>
             {semaforo.label}
           </span>
-          {confianzaPct && (
+          {confianzaPct !== null && confianzaPct > 0 && (
             <span className="text-xs text-white/40">({confianzaPct}% conf.)</span>
           )}
         </div>
@@ -77,7 +77,7 @@ export default function PlaceCard({ lugar, onClose }: Props) {
               </span>
             </div>
           )}
-          {lugar.reporte?.foto_despues && (
+          {lugar.reporte?.foto_despues && lugar.reporte.foto_despues !== '' && (
             <div className="relative aspect-video bg-black/40">
               <img
                 src={lugar.reporte.foto_despues}
@@ -102,6 +102,11 @@ export default function PlaceCard({ lugar, onClose }: Props) {
           </div>
         </div>
 
+        {/* Descripción del estado */}
+        <p className="text-xs mb-3 leading-relaxed" style={{ color: semaforo.bg + 'cc' }}>
+          {semaforo.descripcion}
+        </p>
+
         {lugar.descripcion && (
           <p className="text-sm text-white/60 mb-3 leading-relaxed line-clamp-2">
             {lugar.descripcion}
@@ -110,18 +115,16 @@ export default function PlaceCard({ lugar, onClose }: Props) {
 
         <div className="flex items-center justify-between text-xs text-white/30 mb-4">
           <span>📍 {lugar.lat.toFixed(4)}, {lugar.lng.toFixed(4)}</span>
-          <span>por {lugar.creado_por || 'Anónimo'}</span>
+          <span>por {lugar.creado_por === 'import-openstreetmap' ? 'OpenStreetMap' : lugar.creado_por || 'Anónimo'}</span>
         </div>
 
-        {/* CTA */}
-        {!lugar.reporte && (
-          <Link
-            href={`/classify?lugar_id=${lugar.id}&lat=${lugar.lat}&lng=${lugar.lng}`}
-            className="btn-primary w-full text-center text-sm py-2 block"
-          >
-            📷 Evaluar daño
-          </Link>
-        )}
+        {/* CTA — siempre visible para que cualquiera pueda actualizar el estado */}
+        <Link
+          href={`/classify?lugar_id=${lugar.id}&lat=${lugar.lat}&lng=${lugar.lng}`}
+          className="btn-primary w-full text-center text-sm py-2 block"
+        >
+          📷 {lugar.reporte ? 'Actualizar evaluación' : 'Evaluar estado actual'}
+        </Link>
       </div>
     </div>
   )
