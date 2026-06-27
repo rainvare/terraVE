@@ -2,7 +2,7 @@
 // components/Map.tsx — Leaflet + OpenStreetMap (sin tarjeta, sin token)
 import { useEffect, useState, useCallback } from 'react'
 import dynamic from 'next/dynamic'
-import type { Lugar, ColorSemaforo } from '@/types'
+import type { Lugar } from '@/types'
 import PlaceCard from './PlaceCard'
 
 // Leaflet no funciona en SSR, lo importamos dinámicamente
@@ -146,10 +146,14 @@ export default function MapComponent() {
         </div>
       )}
 
-      {/* Place card */}
+      {/* Place card — fix: selectedLugar (no "lugar") */}
       {selectedLugar && (
         <div className="absolute top-4 right-4 z-[1000] w-80 fade-in-up">
-          <PlaceCard lugar={selectedLugar} onClose={() => setSelectedLugar(null)} />
+          <PlaceCard
+            lugar={selectedLugar}
+            googleMapsKey={process.env.NEXT_PUBLIC_GOOGLE_MAPS_KEY ?? ''}
+            onClose={() => setSelectedLugar(null)}
+          />
         </div>
       )}
     </div>
