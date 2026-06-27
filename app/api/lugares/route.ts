@@ -4,15 +4,22 @@ import { createServerClient } from '@/lib/supabase'
 import { lugaresToGeoJSON } from '@/lib/geo'
 import type { Lugar } from '@/types'
 
+const COLOR_MAP: Record<string, string> = {
+  verde:    '#27AE60',
+  amarillo: '#F1C40F',
+  naranja:  '#E67E22',
+  rojo:     '#E74C3C',
+  gris:     '#95A5A6',
+}
+
 export async function GET(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url)
     const tipo   = searchParams.get('tipo')
-    const estado = searchParams.get('estado') // color_semaforo
+    const estado = searchParams.get('estado')
 
     const supabase = createServerClient()
 
-    // Query con join a reportes_dano para tener el estado de daño
     let query = supabase
       .from('lugares')
       .select(`
@@ -42,22 +49,44 @@ export async function GET(req: NextRequest) {
       )
     }
 
-    // El select de relación devuelve array, tomamos el más reciente
-    const lugares: Lugar[] = (data || []).map((item: any) => ({
-      ...item,
-      reporte: Array.isArray(item.reporte) && item.reporte.length > 0
+    const lugares: Lugar[] = (data || []).map((item: any) => {
+      // Tomar el reporte más reciente si existe
+      const reporte = Array.isArray(item.reporte) && item.reporte.length > 0
         ? item.reporte[0]
-        : null,
-    }))
+        : null
 
-    // Filtrar por estado de daño si se solicita
+      // Color: prioridad → reporte → color_semaforo de lugares → gris
+      const colorKey = reporte?.color_semaforo
+        ?? item.color_semaforo
+        ?? 'gris'
+
+      // Si no hay reporte pero hay color en lugares, crear reporte sintético
+      // para que LeafletMap y PlaceCard lo lean correctamente
+      const reporteEfectivo = reporte ?? (item.color_semaforo && item.color_semaforo !== 'gris'
+        ? {
+            id:             null,
+            clase_dano:     item.estado ?? 'sin_dano',
+            confianza:      0,
+            color_semaforo: item.color_semaforo,
+            foto_despues:   '',
+            created_at:     item.created_at,
+          }
+        : null)
+
+      return {
+        ...item,
+        reporte: reporteEfectivo,
+        color:   COLOR_MAP[colorKey] ?? '#95A5A6',
+      }
+    })
+
+    // Filtrar por estado si se solicita
     const filtered = estado && estado !== 'todos'
-      ? lugares.filter(l => l.reporte?.color_semaforo === estado)
+      ? lugares.filter(l => (l.reporte?.color_semaforo ?? 'gris') === estado)
       : lugares
 
     const geojson = lugaresToGeoJSON(filtered)
 
-    // Stats para el contador
     const stats = {
       total:     filtered.length,
       evaluados: filtered.filter(l => l.reporte).length,
