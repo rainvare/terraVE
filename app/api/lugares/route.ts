@@ -17,6 +17,7 @@ export async function GET(req: NextRequest) {
     const { searchParams } = new URL(req.url)
     const tipo   = searchParams.get('tipo')
     const estado = searchParams.get('estado')
+    const buscar = searchParams.get('buscar')?.trim()
 
     const supabase = createServerClient()
 
@@ -33,35 +34,29 @@ export async function GET(req: NextRequest) {
           created_at
         )
       `)
-      .order('color_semaforo', { ascending: true }) 
-    
-    if (tipo && tipo !== 'todos') {
-      query = query.eq('tipo', tipo)
+      .order('color_semaforo', { ascending: true })
+
+    if (tipo && tipo !== 'todos') query = query.eq('tipo', tipo)
+
+    // Búsqueda por nombre o descripción (dirección)
+    if (buscar) {
+      query = query.or(`nombre.ilike.%${buscar}%,descripcion.ilike.%${buscar}%`)
     }
 
     const { data, error } = await query.limit(500000)
 
     if (error) {
       console.error('Error obteniendo lugares:', error)
-      return NextResponse.json(
-        { error: 'Error consultando lugares' },
-        { status: 500 }
-      )
+      return NextResponse.json({ error: 'Error consultando lugares' }, { status: 500 })
     }
 
     const lugares: Lugar[] = (data || []).map((item: any) => {
-      // Tomar el reporte más reciente si existe
       const reporte = Array.isArray(item.reporte) && item.reporte.length > 0
         ? item.reporte[0]
         : null
 
-      // Color: prioridad → reporte → color_semaforo de lugares → gris
-      const colorKey = reporte?.color_semaforo
-        ?? item.color_semaforo
-        ?? 'gris'
+      const colorKey = reporte?.color_semaforo ?? item.color_semaforo ?? 'gris'
 
-      // Si no hay reporte pero hay color en lugares, crear reporte sintético
-      // para que LeafletMap y PlaceCard lo lean correctamente
       const reporteEfectivo = reporte ?? (item.color_semaforo && item.color_semaforo !== 'gris'
         ? {
             id:             null,
@@ -80,7 +75,6 @@ export async function GET(req: NextRequest) {
       }
     })
 
-    // Filtrar por estado si se solicita
     const filtered = estado && estado !== 'todos'
       ? lugares.filter(l => (l.reporte?.color_semaforo ?? 'gris') === estado)
       : lugares
@@ -97,9 +91,6 @@ export async function GET(req: NextRequest) {
 
   } catch (err) {
     console.error('Error inesperado /api/lugares:', err)
-    return NextResponse.json(
-      { error: 'Error interno' },
-      { status: 500 }
-    )
+    return NextResponse.json({ error: 'Error interno' }, { status: 500 })
   }
-}
+        }
