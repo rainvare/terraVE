@@ -60,7 +60,7 @@ function DetailCard({ lugar, onClose }: {
       })
       // Actualizar reporte si existe
       if (lugar.reporte?.id) {
-        await fetch(`/api/reportes/${lugar.reporte.id}`, {
+        await fetch(`/api/reports/${lugar.reporte.id}`, {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ clase_dano: clase, color_semaforo: nuevoColor, confianza: 1.0 }),
@@ -264,5 +264,5 @@ export default function LugaresPanel({ lugares, selectedLugar, onSelectLugar, on
       )}
     </div>
   )
-              }
-      
+    }
+                                                                                    
