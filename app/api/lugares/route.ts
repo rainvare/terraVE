@@ -96,8 +96,8 @@ export async function GET(req: NextRequest) {
 
     const stats = {
       total:     filtered.length,
-      evaluados: filtered.filter(l => l.reporte).length,
-      criticos:  filtered.filter(l => l.reporte?.color_semaforo === 'rojo').length,
+      evaluados: filtered.filter(l => (l.color_semaforo ?? 'gris') !== 'gris').length,
+      criticos:  filtered.filter(l => ['naranja', 'rojo'].includes(l.color_semaforo ?? 'gris')).length,
     }
 
     return NextResponse.json({ geojson, stats })
@@ -106,4 +106,4 @@ export async function GET(req: NextRequest) {
     console.error('Error inesperado /api/lugares:', err)
     return NextResponse.json({ error: 'Error interno' }, { status: 500 })
   }
-    }
+}
