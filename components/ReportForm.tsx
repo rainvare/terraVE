@@ -89,13 +89,12 @@ export default function ReportForm() {
     try {
       const q   = encodeURIComponent(`${direccion}, Venezuela`)
       const key = process.env.NEXT_PUBLIC_GOOGLE_MAPS_KEY
-      const res = await fetch(`https://maps.googleapis.com/maps/api/geocode/json?address=${q}&key=${key}`)
+      const res = await fetch(`/api/geocode?address=${encodeURIComponent(direccion)}`)
       const d   = await res.json()
-      if (d.status === 'OK' && d.results[0]) {
-        const { lat, lng } = d.results[0].geometry.location
-        setForm(f => ({ ...f, lat: lat.toFixed(6), lng: lng.toFixed(6) }))
-        setGeocoding('ok')
-      } else setGeocoding('error')
+      if (d.lat) {
+       setForm(f => ({ ...f, lat: d.lat.toFixed(6), lng: d.lng.toFixed(6) }))
+       setGeocoding('ok')
+    } else setGeocoding('error')
     } catch { setGeocoding('error') }
   }
 
