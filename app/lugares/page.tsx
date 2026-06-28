@@ -1,6 +1,6 @@
 // app/lugares/page.tsx
 'use client'
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import Link from 'next/link'
 import type { Lugar } from '@/types'
 
@@ -27,14 +27,45 @@ const OPCIONES_DANO = [
   { clase: 'destruido',  color: 'rojo',     label: 'Destruido',  emoji: '🔴' },
 ] as const
 
+function comprimirFoto(file: File): Promise<string> {
+  return new Promise(resolve => {
+    const reader = new FileReader()
+    reader.onload = ev => {
+      const img = new Image()
+      img.onload = () => {
+        const canvas = document.createElement('canvas')
+        const MAX = 800
+        let { width, height } = img
+        if (width > MAX) { height = height * MAX / width; width = MAX }
+        if (height > MAX) { width = width * MAX / height; height = MAX }
+        canvas.width = width; canvas.height = height
+        canvas.getContext('2d')!.drawImage(img, 0, 0, width, height)
+        resolve(canvas.toDataURL('image/jpeg', 0.8))
+      }
+      img.src = ev.target?.result as string
+    }
+    reader.readAsDataURL(file)
+  })
+}
+
 export default function LugaresPage() {
-  const [lugares,   setLugares]   = useState<Lugar[]>([])
-  const [loading,   setLoading]   = useState(true)
-  const [buscar,    setBuscar]    = useState('')
-  const [selected,  setSelected]  = useState<Lugar | null>(null)
-  const [editando,  setEditando]  = useState(false)
-  const [guardando, setGuardando] = useState(false)
-  const [guardado,  setGuardado]  = useState(false)
+  const [lugares,      setLugares]      = useState<Lugar[]>([])
+  const [loading,      setLoading]      = useState(true)
+  const [buscar,       setBuscar]       = useState('')
+  const [selected,     setSelected]     = useState<Lugar | null>(null)
+  const [editandoDano, setEditandoDano] = useState(false)
+  const [editandoInfo, setEditandoInfo] = useState(false)
+  const [guardando,    setGuardando]    = useState(false)
+  const [guardado,     setGuardado]     = useState(false)
+  const [error,        setError]        = useState<string | null>(null)
+
+  // Campos de edición
+  const [editNombre,      setEditNombre]      = useState('')
+  const [editFotoAntes,   setEditFotoAntes]   = useState<string | null>(null)
+  const [editFotoDespues, setEditFotoDespues] = useState<string | null>(null)
+
+  const fotoAntesRef   = useRef<HTMLInputElement>(null)
+  const fotoDespuesRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
     const params = new URLSearchParams()
@@ -60,18 +91,80 @@ export default function LugaresPage() {
       .finally(() => setLoading(false))
   }, [buscar])
 
-  const guardarDano = async (clase: string, nuevoColor: string) => {
+  const abrirEdicionInfo = () => {
     if (!selected) return
-    setGuardando(true)
+    setEditNombre(selected.nombre)
+    setEditFotoAntes(null)
+    setEditFotoDespues(null)
+    setEditandoInfo(true)
+    setEditandoDano(false)
+    setError(null)
+  }
+
+  const guardarInfo = async () => {
+    if (!selected) return
+    setGuardando(true); setError(null)
     try {
-      await fetch(`/api/lugares/${selected.id}`, {
+      // Subir foto_antes si cambió
+      let nuevaFotoAntes = selected.foto_antes
+      if (editFotoAntes) {
+        const r = await fetch('/api/classify', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ imagen: editFotoAntes, lugar_id: selected.id, lat: selected.lat, lng: selected.lng }),
+        })
+        // No clasificar, solo subir — usamos el campo foto_antes directamente
+        // En su lugar subimos via el endpoint de lugar
+      }
+
+      const body: any = { nombre: editNombre }
+      if (editFotoAntes) body.foto_antes = editFotoAntes
+
+      const r1 = await fetch(`/api/lugares/${selected.id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          estado: clase === 'sin_dano' ? 'sin_evaluar' : clase,
-          color_semaforo: nuevoColor,
-        }),
+        body: JSON.stringify(body),
       })
+      if (!r1.ok) throw new Error('Error actualizando lugar')
+
+      // Subir foto_despues si cambió
+      if (editFotoDespues) {
+        await fetch('/api/classify', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ imagen: editFotoDespues, lugar_id: selected.id, lat: selected.lat, lng: selected.lng }),
+        })
+      }
+
+      // Actualizar local
+      const updated = {
+        ...selected,
+        nombre: editNombre,
+        ...(editFotoAntes ? { foto_antes: editFotoAntes } : {}),
+      }
+      setLugares(prev => prev.map(l => l.id === selected.id ? updated : l))
+      setSelected(updated)
+      setEditandoInfo(false)
+      setGuardado(true)
+      setTimeout(() => setGuardado(false), 2000)
+    } catch (e: any) {
+      setError(e.message)
+    } finally {
+      setGuardando(false)
+    }
+  }
+
+  const guardarDano = async (clase: string, nuevoColor: string) => {
+    if (!selected) return
+    setGuardando(true); setError(null)
+    try {
+      const r1 = await fetch(`/api/lugares/${selected.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ estado: clase === 'sin_dano' ? 'sin_evaluar' : clase, color_semaforo: nuevoColor }),
+      })
+      if (!r1.ok) throw new Error(`Error ${r1.status}`)
+
       if (selected.reporte?.id) {
         await fetch(`/api/reports/${selected.reporte.id}`, {
           method: 'PATCH',
@@ -79,14 +172,15 @@ export default function LugaresPage() {
           body: JSON.stringify({ clase_dano: clase, color_semaforo: nuevoColor, confianza: 1.0 }),
         })
       }
-      // Actualizar local
-      setLugares(prev => prev.map(l =>
-        l.id === selected.id ? { ...l, color_semaforo: nuevoColor as any } : l
-      ))
-      setSelected(prev => prev ? { ...prev, color_semaforo: nuevoColor as any } : null)
+
+      const updated = { ...selected, color_semaforo: nuevoColor as any }
+      setLugares(prev => prev.map(l => l.id === selected.id ? updated : l))
+      setSelected(updated)
+      setEditandoDano(false)
       setGuardado(true)
-      setEditando(false)
       setTimeout(() => setGuardado(false), 2000)
+    } catch (e: any) {
+      setError(e.message)
     } finally {
       setGuardando(false)
     }
@@ -97,11 +191,9 @@ export default function LugaresPage() {
 
   return (
     <div className="min-h-screen bg-[#0D1B2A] text-white flex flex-col">
-      {/* Nav */}
       <nav className="flex items-center justify-between px-4 py-3 border-b border-white/10 shrink-0">
         <Link href="/" className="flex items-center gap-2">
-          <span>🌍</span>
-          <span className="font-bold text-[#D4A017]">TerraVE</span>
+          <span>🌍</span><span className="font-bold text-[#D4A017]">TerraVE</span>
         </Link>
         <div className="flex items-center gap-3">
           <Link href="/map" className="text-xs text-white/50 hover:text-white">🗺️ Mapa</Link>
@@ -110,47 +202,103 @@ export default function LugaresPage() {
       </nav>
 
       {selected ? (
-        /* ── Vista detalle ── */
         <div className="flex-1 flex flex-col max-w-lg mx-auto w-full px-4 py-4 gap-4">
+
           {/* Header */}
           <div className="flex items-start gap-3">
-            <button onClick={() => { setSelected(null); setEditando(false) }} className="text-white/40 hover:text-white text-xl mt-0.5">←</button>
-            <div>
-              <h1 className="font-semibold text-base leading-tight">{selected.nombre}</h1>
+            <button onClick={() => { setSelected(null); setEditandoDano(false); setEditandoInfo(false) }}
+              className="text-white/40 hover:text-white text-xl mt-0.5">←</button>
+            <div className="flex-1 min-w-0">
+              {editandoInfo ? (
+                <input value={editNombre} onChange={e => setEditNombre(e.target.value)}
+                  className="bg-white/10 border border-white/20 rounded-lg px-3 py-1.5 text-sm text-white w-full outline-none focus:border-[#D4A017]" />
+              ) : (
+                <h1 className="font-semibold text-base leading-tight">{selected.nombre}</h1>
+              )}
               <p className="text-xs text-white/35 mt-0.5 line-clamp-2">{direccion(selected)}</p>
             </div>
           </div>
 
-          {/* Semáforo */}
+          {/* Acciones */}
           <div className="flex items-center justify-between">
             <span
               className="inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-full"
-              style={{
-                background: SEMAFORO_COLOR[selected.color_semaforo ?? 'gris'] + '22',
-                color: SEMAFORO_COLOR[selected.color_semaforo ?? 'gris']
-              }}
+              style={{ background: SEMAFORO_COLOR[selected.color_semaforo ?? 'gris'] + '22', color: SEMAFORO_COLOR[selected.color_semaforo ?? 'gris'] }}
             >
               <span className="w-2 h-2 rounded-full" style={{ background: SEMAFORO_COLOR[selected.color_semaforo ?? 'gris'] }} />
               {SEMAFORO_LABEL[selected.color_semaforo ?? 'gris']}
             </span>
-            {guardado
-              ? <span className="text-xs text-green-400">✓ Guardado</span>
-              : <button onClick={() => setEditando(e => !e)} className="text-xs text-[#D4A017]">
-                  {editando ? 'Cancelar' : '✏️ Editar daño'}
-                </button>
-            }
+            <div className="flex gap-3">
+              {guardado
+                ? <span className="text-xs text-green-400">✓ Guardado</span>
+                : <>
+                    <button onClick={abrirEdicionInfo}
+                      className={`text-xs ${editandoInfo ? 'text-white/40' : 'text-[#D4A017]'}`}>
+                      {editandoInfo ? 'Cancelar' : '✏️ Editar'}
+                    </button>
+                    {!editandoInfo && (
+                      <button onClick={() => { setEditandoDano(e => !e); setEditandoInfo(false) }}
+                        className="text-xs text-white/40">
+                        {editandoDano ? 'Cancelar' : '🔴 Daño'}
+                      </button>
+                    )}
+                  </>
+              }
+            </div>
           </div>
 
-          {/* Selector manual */}
-          {editando && (
+          {/* Editor de info */}
+          {editandoInfo && (
+            <div className="flex flex-col gap-3 bg-white/5 rounded-xl p-4">
+              <p className="text-xs text-white/40 font-semibold uppercase tracking-wider">Editar lugar</p>
+
+              {/* Foto antes */}
+              <div>
+                <p className="text-xs text-white/40 mb-1">Foto de antes</p>
+                <div onClick={() => fotoAntesRef.current?.click()}
+                  className="border border-dashed border-white/20 rounded-xl overflow-hidden cursor-pointer hover:border-[#D4A017]/50 transition-colors">
+                  {editFotoAntes
+                    ? <img src={editFotoAntes} alt="antes" className="w-full h-32 object-cover" />
+                    : selected.foto_antes
+                      ? <img src={selected.foto_antes} alt="antes" className="w-full h-32 object-cover opacity-50" />
+                      : <div className="h-32 flex items-center justify-center text-white/20 text-xs gap-2"><span>📸</span>Tocar para cambiar</div>
+                  }
+                </div>
+                <input ref={fotoAntesRef} type="file" accept="image/*" className="hidden"
+                  onChange={async e => { const f = e.target.files?.[0]; if (f) setEditFotoAntes(await comprimirFoto(f)) }} />
+              </div>
+
+              {/* Foto después */}
+              <div>
+                <p className="text-xs text-white/40 mb-1">Foto de después</p>
+                <div onClick={() => fotoDespuesRef.current?.click()}
+                  className="border border-dashed border-white/20 rounded-xl overflow-hidden cursor-pointer hover:border-[#D4A017]/50 transition-colors">
+                  {editFotoDespues
+                    ? <img src={editFotoDespues} alt="después" className="w-full h-32 object-cover" />
+                    : selected.reporte?.foto_despues
+                      ? <img src={selected.reporte.foto_despues} alt="después" className="w-full h-32 object-cover opacity-50" />
+                      : <div className="h-32 flex items-center justify-center text-white/20 text-xs gap-2"><span>📸</span>Tocar para agregar</div>
+                  }
+                </div>
+                <input ref={fotoDespuesRef} type="file" accept="image/*" className="hidden"
+                  onChange={async e => { const f = e.target.files?.[0]; if (f) setEditFotoDespues(await comprimirFoto(f)) }} />
+              </div>
+
+              {error && <p className="text-xs text-red-400">❌ {error}</p>}
+
+              <button onClick={guardarInfo} disabled={guardando}
+                className="btn-primary text-sm py-2.5 disabled:opacity-50">
+                {guardando ? '⏳ Guardando...' : '💾 Guardar cambios'}
+              </button>
+            </div>
+          )}
+
+          {/* Selector de daño */}
+          {editandoDano && (
             <div className="grid grid-cols-2 gap-2">
               {OPCIONES_DANO.map(op => (
-                <button
-                  key={op.clase}
-                  onClick={() => guardarDano(op.clase, op.color)}
-                  disabled={guardando}
-                  className="flex items-center gap-2 px-3 py-3 rounded-xl bg-white/5 hover:bg-white/10 transition-colors disabled:opacity-50"
-                >
+                <button key={op.clase} onClick={() => guardarDano(op.clase, op.color)} disabled={guardando}
+                  className="flex items-center gap-2 px-3 py-3 rounded-xl bg-white/5 hover:bg-white/10 transition-colors disabled:opacity-50">
                   <span className="text-xl">{op.emoji}</span>
                   <span className="text-xs font-medium">{op.label}</span>
                 </button>
@@ -159,61 +307,53 @@ export default function LugaresPage() {
           )}
 
           {/* Fotos */}
-          <div className="grid grid-cols-2 gap-3">
-            <div className="flex flex-col gap-1">
-              <span className="text-[10px] text-white/30 uppercase tracking-wider font-semibold">Antes</span>
-              {selected.foto_antes
-                ? <img src={selected.foto_antes} alt="antes" className="w-full h-44 object-cover rounded-xl" />
-                : <div className="h-44 bg-white/5 rounded-xl flex flex-col items-center justify-center text-white/20 text-xs gap-1"><span className="text-3xl">🗺️</span>Sin foto</div>
-              }
+          {!editandoInfo && (
+            <div className="grid grid-cols-2 gap-3">
+              <div className="flex flex-col gap-1">
+                <span className="text-[10px] text-white/30 uppercase tracking-wider font-semibold">Antes</span>
+                {selected.foto_antes
+                  ? <img src={selected.foto_antes} alt="antes" className="w-full h-44 object-cover rounded-xl" />
+                  : <div className="h-44 bg-white/5 rounded-xl flex flex-col items-center justify-center text-white/20 text-xs gap-1"><span className="text-3xl">🗺️</span>Sin foto</div>
+                }
+              </div>
+              <div className="flex flex-col gap-1">
+                <span className="text-[10px] text-white/30 uppercase tracking-wider font-semibold">Después</span>
+                {selected.reporte?.foto_despues
+                  ? <img src={selected.reporte.foto_despues} alt="después" className="w-full h-44 object-cover rounded-xl" />
+                  : <div className="h-44 bg-white/5 rounded-xl flex flex-col items-center justify-center text-white/20 text-xs gap-1"><span className="text-3xl">📷</span>Sin foto</div>
+                }
+              </div>
             </div>
-            <div className="flex flex-col gap-1">
-              <span className="text-[10px] text-white/30 uppercase tracking-wider font-semibold">Después</span>
-              {selected.reporte?.foto_despues
-                ? <img src={selected.reporte.foto_despues} alt="después" className="w-full h-44 object-cover rounded-xl" />
-                : <div className="h-44 bg-white/5 rounded-xl flex flex-col items-center justify-center text-white/20 text-xs gap-1"><span className="text-3xl">📷</span>Sin foto</div>
-              }
-            </div>
-          </div>
+          )}
 
-          {/* Acciones */}
-          <div className="flex gap-4 pt-1">
-            <a
-              href={`https://www.google.com/maps/@?api=1&map_action=pano&viewpoint=${selected.lat},${selected.lng}`}
-              target="_blank" rel="noopener noreferrer"
-              className="text-xs text-[#D4A017] hover:underline"
-            >
-              Ver en Street View →
-            </a>
-            <a href={`/classify?lugar_id=${selected.id}`} className="text-xs text-[#E74C3C] hover:underline">
-              Reportar daño
-            </a>
-          </div>
+          {/* Links */}
+          {!editandoInfo && (
+            <div className="flex gap-4 pt-1">
+              <a href={`https://www.google.com/maps/@?api=1&map_action=pano&viewpoint=${selected.lat},${selected.lng}`}
+                target="_blank" rel="noopener noreferrer" className="text-xs text-[#D4A017] hover:underline">
+                Ver en Street View →
+              </a>
+              <a href={`/classify?lugar_id=${selected.id}`} className="text-xs text-[#E74C3C] hover:underline">
+                Reportar daño
+              </a>
+            </div>
+          )}
         </div>
       ) : (
-        /* ── Vista lista ── */
         <div className="flex-1 flex flex-col">
-          {/* Buscador */}
           <div className="px-4 py-3 border-b border-white/10">
             <div className="flex items-center gap-2 bg-white/5 border border-white/10 rounded-xl px-3 py-2">
               <span className="text-white/30">🔍</span>
-              <input
-                type="text"
-                value={buscar}
-                onChange={e => setBuscar(e.target.value)}
+              <input type="text" value={buscar} onChange={e => setBuscar(e.target.value)}
                 placeholder="Buscar por nombre o dirección..."
-                className="bg-transparent text-white text-sm placeholder:text-white/25 outline-none flex-1"
-              />
-              {buscar && (
-                <button onClick={() => setBuscar('')} className="text-white/30 hover:text-white text-lg leading-none">×</button>
-              )}
+                className="bg-transparent text-white text-sm placeholder:text-white/25 outline-none flex-1" />
+              {buscar && <button onClick={() => setBuscar('')} className="text-white/30 hover:text-white text-lg leading-none">×</button>}
             </div>
             <p className="text-xs text-white/30 mt-2">
               {loading ? 'Cargando…' : `${lugares.length} lugar${lugares.length !== 1 ? 'es' : ''}`}
             </p>
           </div>
 
-          {/* Lista */}
           <div className="flex-1 overflow-y-auto divide-y divide-white/5">
             {loading ? (
               <div className="flex items-center justify-center h-40 text-white/30 text-sm animate-pulse">Cargando…</div>
@@ -226,11 +366,8 @@ export default function LugaresPage() {
                 const color = l.color_semaforo ?? 'gris'
                 const foto  = l.foto_antes ?? l.reporte?.foto_despues ?? null
                 return (
-                  <button
-                    key={l.id}
-                    onClick={() => setSelected(l)}
-                    className="w-full flex items-center gap-3 px-4 py-3 hover:bg-white/5 transition-colors text-left"
-                  >
+                  <button key={l.id} onClick={() => setSelected(l)}
+                    className="w-full flex items-center gap-3 px-4 py-3 hover:bg-white/5 transition-colors text-left">
                     <div className="w-14 h-14 rounded-xl overflow-hidden shrink-0 bg-white/5">
                       {foto
                         ? <img src={foto} alt={l.nombre} className="w-full h-full object-cover" />
@@ -251,4 +388,5 @@ export default function LugaresPage() {
       )}
     </div>
   )
-}
+    }
+          
