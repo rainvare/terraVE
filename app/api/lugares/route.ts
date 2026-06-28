@@ -46,6 +46,9 @@ export async function GET(req: NextRequest) {
       if (tipo && tipo !== 'todos')  query = query.eq('tipo', tipo)
       if (buscar)                    query = query.or(`nombre.ilike.%${buscar}%,descripcion.ilike.%${buscar}%`)
 
+      // Solo lugares con foto (para rendimiento)
+      if (!buscar) query = query.not('foto_antes', 'is', null)
+
       const { data: page, error: pageError } = await query
 
       if (pageError) {
@@ -102,4 +105,5 @@ export async function GET(req: NextRequest) {
     console.error('Error inesperado /api/lugares:', err)
     return NextResponse.json({ error: 'Error interno' }, { status: 500 })
   }
-          }
+      }
+
