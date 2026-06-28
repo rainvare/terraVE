@@ -3,25 +3,25 @@
 import { useEffect, useState } from 'react'
 
 interface Stats {
-  total: number
+  total:     number
   evaluados: number
-  criticos: number
+  criticos:  number
 }
 
 export default function StatsCounter() {
   const [stats, setStats] = useState<Stats | null>(null)
 
   useEffect(() => {
-    fetch('/api/lugares')
+    fetch('/api/stats')
       .then(r => r.json())
-      .then(data => setStats(data.stats))
-      .catch(() => {}) // Silencia error si no hay datos aún
+      .then(data => setStats(data))
+      .catch(() => {})
   }, [])
 
   const items = [
-    { label: 'Lugares registrados', value: stats?.total ?? '—', icon: '📍' },
+    { label: 'Lugares registrados',   value: stats?.total     ?? '—', icon: '📍' },
     { label: 'Estructuras evaluadas', value: stats?.evaluados ?? '—', icon: '🔍' },
-    { label: 'Zonas críticas', value: stats?.criticos ?? '—', icon: '🔴' },
+    { label: 'Zonas críticas',        value: stats?.criticos  ?? '—', icon: '🔴' },
   ]
 
   return (
