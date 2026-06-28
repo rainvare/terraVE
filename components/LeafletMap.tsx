@@ -50,14 +50,13 @@ export default function LeafletMap({ lugares, onSelectLugar }: Props) {
 
     import('leaflet').then(async L => {
       // Cargar MarkerCluster JS
-      await import('leaflet.markercluster' as any).catch(() => {
-        // fallback: cargar via script tag si el import falla
-        return new Promise<void>(resolve => {
-          const s = document.createElement('script')
-          s.src = 'https://cdnjs.cloudflare.com/ajax/libs/leaflet.markercluster/1.5.3/leaflet.markercluster.js'
-          s.onload = () => resolve()
-          document.head.appendChild(s)
-        })
+      // Cargar MarkerCluster desde CDN
+      await new Promise<void>(resolve => {
+        if ((window as any).L?.MarkerClusterGroup) { resolve(); return }
+        const s = document.createElement('script')
+        s.src = 'https://cdnjs.cloudflare.com/ajax/libs/leaflet.markercluster/1.5.3/leaflet.markercluster.js'
+        s.onload = () => resolve()
+        document.head.appendChild(s)
       })
 
       delete (L.Icon.Default.prototype as any)._getIconUrl
@@ -224,4 +223,5 @@ export default function LeafletMap({ lugares, onSelectLugar }: Props) {
       <div ref={containerRef} className="w-full h-full" />
     </>
   )
-                                  }
+          }
+      
