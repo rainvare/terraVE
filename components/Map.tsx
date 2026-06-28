@@ -40,11 +40,11 @@ export default function MapComponent() {
       if (filters.estado !== 'todos') params.set('estado', filters.estado)
       if (filters.buscar)             params.set('buscar', filters.buscar)
 
-      const res  = await fetch(`/api/lugares?${params}`)
+      const res  = await fetch(`/api/geojson?${params}`)
       const data = await res.json()
 
-      if (data.geojson?.features) {
-        const lista: Lugar[] = data.geojson.features.map((f: any) => ({
+      if (data.features) {
+        const lista: Lugar[] = data.features.map((f: any) => ({
           ...f.properties,
           lat: f.geometry.coordinates[1],
           lng: f.geometry.coordinates[0],
@@ -171,5 +171,5 @@ export default function MapComponent() {
       )}
     </div>
   )
-      }
-        
+    }
+               
