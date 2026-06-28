@@ -1,4 +1,4 @@
-use client'
+'use client'
 // components/PlaceCard.tsx
 import { useState, useEffect } from 'react'
 import type { Lugar } from '@/types'
