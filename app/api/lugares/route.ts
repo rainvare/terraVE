@@ -21,36 +21,45 @@ export async function GET(req: NextRequest) {
 
     const supabase = createServerClient()
 
-    let query = supabase
-      .from('lugares')
-      .select(`
-        *,
-        reporte:reportes_dano(
-          id,
-          clase_dano,
-          confianza,
-          color_semaforo,
-          foto_despues,
-          created_at
-        )
-      `)
-      .order('color_semaforo', { ascending: true })
+    // Supabase devuelve máx 1000 filas por defecto — paginamos para traer todos
+    let allData: any[] = []
+    let from = 0
+    const PAGE = 1000
 
-    if (tipo && tipo !== 'todos') query = query.eq('tipo', tipo)
+    while (true) {
+      let query = supabase
+        .from('lugares')
+        .select(`
+          *,
+          reporte:reportes_dano(
+            id,
+            clase_dano,
+            confianza,
+            color_semaforo,
+            foto_despues,
+            created_at
+          )
+        `)
+        .order('color_semaforo', { ascending: true })
+        .range(from, from + PAGE - 1)
 
-    // Búsqueda por nombre o descripción (dirección)
-    if (buscar) {
-      query = query.or(`nombre.ilike.%${buscar}%,descripcion.ilike.%${buscar}%`)
+      if (tipo && tipo !== 'todos')  query = query.eq('tipo', tipo)
+      if (buscar)                    query = query.or(`nombre.ilike.%${buscar}%,descripcion.ilike.%${buscar}%`)
+
+      const { data: page, error: pageError } = await query
+
+      if (pageError) {
+        console.error('Error obteniendo lugares:', pageError)
+        return NextResponse.json({ error: 'Error consultando lugares' }, { status: 500 })
+      }
+
+      if (!page || page.length === 0) break
+      allData = allData.concat(page)
+      if (page.length < PAGE) break
+      from += PAGE
     }
 
-    const { data, error } = await query.limit(500000)
-
-    if (error) {
-      console.error('Error obteniendo lugares:', error)
-      return NextResponse.json({ error: 'Error consultando lugares' }, { status: 500 })
-    }
-
-    const lugares: Lugar[] = (data || []).map((item: any) => {
+    const lugares: Lugar[] = allData.map((item: any) => {
       const reporte = Array.isArray(item.reporte) && item.reporte.length > 0
         ? item.reporte[0]
         : null
@@ -76,7 +85,7 @@ export async function GET(req: NextRequest) {
     })
 
     const filtered = estado && estado !== 'todos'
-      ? lugares.filter(l => (l.reporte?.color_semaforo ?? 'gris') === estado)
+      ? lugares.filter(l => (l.reporte?.color_semaforo ?? l.color_semaforo ?? 'gris') === estado)
       : lugares
 
     const geojson = lugaresToGeoJSON(filtered)
@@ -93,4 +102,4 @@ export async function GET(req: NextRequest) {
     console.error('Error inesperado /api/lugares:', err)
     return NextResponse.json({ error: 'Error interno' }, { status: 500 })
   }
-        }
+          }
