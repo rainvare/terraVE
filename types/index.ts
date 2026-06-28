@@ -6,6 +6,8 @@ export type ClaseDano = 'sin_dano' | 'dano_menor' | 'dano_mayor' | 'destruido'
 
 export type ColorSemaforo = 'verde' | 'amarillo' | 'naranja' | 'rojo' | 'gris'
 
+export type EstadoLugar = 'sin_evaluar' | 'dano_menor' | 'dano_mayor'
+
 export interface Lugar {
   id: string
   nombre: string
@@ -13,14 +15,18 @@ export interface Lugar {
   descripcion?: string
   lat: number
   lng: number
-  foto_antes?: string
+  foto_antes?: string | null
   creado_por?: string
   created_at: string
+  estado?: EstadoLugar
+  color_semaforo?: ColorSemaforo
   reporte?: ReporteDano | null
+  // campo interno del mapa (calculado en route.ts)
+  color?: string
 }
 
 export interface ReporteDano {
-  id: string
+  id: string | null
   lugar_id?: string
   foto_despues: string
   clase_dano: ClaseDano
