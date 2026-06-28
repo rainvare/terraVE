@@ -39,6 +39,7 @@ export default function PlaceCard({ lugar, googleMapsKey, onClose }: PlaceCardPr
   const fotoAntes   = lugar.foto_antes ?? null
   const fotoDespues = lugar.reporte?.foto_despues ?? null
   const svUrl       = streetViewUrl(lugar.lat, lugar.lng, googleMapsKey)
+  const colorKey    = lugar.color_semaforo ?? 'gris'
 
   // Verificar cobertura de Street View (Metadata API — gratis)
   useEffect(() => {
@@ -70,10 +71,10 @@ export default function PlaceCard({ lugar, googleMapsKey, onClose }: PlaceCardPr
           {/* Semáforo */}
           <span
             className="inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full"
-            style={{ background: SEMAFORO_COLOR[lugar.color_semaforo] + '33', color: SEMAFORO_COLOR[lugar.color_semaforo] }}
+            style={{ background: SEMAFORO_COLOR[colorKey] + '33', color: SEMAFORO_COLOR[colorKey] }}
           >
-            <span className="w-1.5 h-1.5 rounded-full inline-block" style={{ background: SEMAFORO_COLOR[lugar.color_semaforo] }} />
-            {SEMAFORO_LABEL[lugar.color_semaforo]}
+            <span className="w-1.5 h-1.5 rounded-full inline-block" style={{ background: SEMAFORO_COLOR[colorKey] }} />
+            {SEMAFORO_LABEL[colorKey]}
           </span>
           {/* Cerrar */}
           <button
@@ -161,4 +162,4 @@ export default function PlaceCard({ lugar, googleMapsKey, onClose }: PlaceCardPr
       </div>
     </div>
   )
-}
+            }
