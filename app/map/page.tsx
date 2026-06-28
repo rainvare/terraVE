@@ -1,8 +1,7 @@
 // app/map/page.tsx
-import Link   from 'next/link'
+import Link    from 'next/link'
 import dynamic from 'next/dynamic'
 
-// Cargar Mapbox solo en cliente (requiere window)
 const Map = dynamic(() => import('@/components/Map'), {
   ssr:     false,
   loading: () => (
@@ -25,8 +24,15 @@ export default function MapPage() {
           <span className="font-display font-bold text-[#D4A017]">TerraVE</span>
         </Link>
         <div className="flex items-center gap-3">
-          <Link href="/report"   className="btn-secondary text-xs px-3 py-1.5">+ Reportar</Link>
-          <Link href="/classify" className="btn-primary  text-xs px-3 py-1.5">📷 Evaluar</Link>
+          {/* Nuevos botones de análisis */}
+          <Link href="/satelital" className="btn-secondary text-xs px-3 py-1.5 flex items-center gap-1">
+            🛰️ Satelital
+          </Link>
+          <Link href="/dashboard" className="btn-secondary text-xs px-3 py-1.5 flex items-center gap-1">
+            📊 Dashboard
+          </Link>
+          <Link href="/report"    className="btn-secondary text-xs px-3 py-1.5">+ Reportar</Link>
+          <Link href="/classify"  className="btn-primary   text-xs px-3 py-1.5">📷 Evaluar</Link>
         </div>
       </nav>
 
