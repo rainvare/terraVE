@@ -45,9 +45,10 @@ export async function GET(req: NextRequest) {
 
       if (tipo && tipo !== 'todos')  query = query.eq('tipo', tipo)
       if (buscar)                    query = query.or(`nombre.ilike.%${buscar}%,descripcion.ilike.%${buscar}%`)
+      if (estado && estado !== 'todos') query = query.eq('color_semaforo', estado)
 
-      // Solo lugares con foto (para rendimiento)
-      if (!buscar) query = query.not('foto_antes', 'is', null)
+      // Solo lugares con foto (para rendimiento) — excepto al filtrar por estado
+      if (!buscar && (!estado || estado === 'todos')) query = query.not('foto_antes', 'is', null)
 
       const { data: page, error: pageError } = await query
 
@@ -88,7 +89,7 @@ export async function GET(req: NextRequest) {
     })
 
     const filtered = estado && estado !== 'todos'
-      ? lugares.filter(l => (l.reporte?.color_semaforo ?? l.color_semaforo ?? 'gris') === estado)
+      ? lugares.filter(l => (l.color_semaforo ?? 'gris') === estado)
       : lugares
 
     const geojson = lugaresToGeoJSON(filtered)
@@ -105,5 +106,4 @@ export async function GET(req: NextRequest) {
     console.error('Error inesperado /api/lugares:', err)
     return NextResponse.json({ error: 'Error interno' }, { status: 500 })
   }
-      }
-
+    }
