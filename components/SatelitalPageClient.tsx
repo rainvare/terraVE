@@ -44,9 +44,17 @@ export default function SatelitalPageClient() {
             <span className="w-3 h-3 rounded-full bg-blue-400 inline-block" />
             Reporte sin coincidencia
           </span>
-          <span className="ml-auto text-white/30">
-            📡 Sentinel-1 · 25 jun 2026
-          </span>
+          <div className="ml-auto flex items-center gap-3">
+            <span className="text-white/30 hidden sm:inline">📡 Sentinel-1 · 25 jun 2026</span>
+            
+              href="https://www.arcgis.com/home/webscene/viewer.html?webscene=c01ef4b6b74b4d25a39f7a1e4865be58"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-1.5 text-xs text-[#D4A017] hover:text-white border border-[#D4A017]/30 hover:border-white/30 rounded-lg px-2 py-1 transition-colors whitespace-nowrap"
+            >
+              🌐 Ver en 3D
+            </a>
+          </div>
         </div>
       </div>
 
