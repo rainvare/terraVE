@@ -47,7 +47,7 @@ export default function SatelitalPageClient() {
           <div className="ml-auto flex items-center gap-3">
             <span className="text-white/30 hidden sm:inline">📡 Sentinel-1 · 25 jun 2026</span>
             <a
-              href="https://www.arcgis.com/home/webscene/viewer.html?webscene=c01ef4b6b74b4d25a39f7a1e4865be58"
+              href="https://gis.earthdata.nasa.gov/portal/apps/mapviewer/index.html?webmap=0c3d77dd5aae46e4829d9a282477615c"
               target="_blank"
               rel="noopener noreferrer"
               className="flex items-center gap-1.5 text-xs text-[#D4A017] hover:text-white border border-[#D4A017]/30 hover:border-white/30 rounded-lg px-2 py-1 transition-colors whitespace-nowrap"
