@@ -80,8 +80,8 @@ export default function DashboardClient() {
         const [sRes, mRes, cRes] = await Promise.all([
           fetch(`${SUPABASE_URL}/rest/v1/stats_dashboard?limit=1`, { headers }),
           fetch(`${SUPABASE_URL}/rest/v1/poblacion_expuesta?zona_critica=eq.true&order=pop_total_expuesta.desc&limit=15&select=adm1_name,adm2_name,pop_total_expuesta,pop_mmi_viii,pop_mmi_ix`, { headers }),
-          // Solo coincidencias con daño grave, destruido o colapso (color rojo/naranja)
           fetch(`${SUPABASE_URL}/rest/v1/coincidencias_satelital?select=lugar_nombre,color_semaforo,reporte_lat,reporte_lng,area_m2&color_semaforo=in.(rojo,naranja,amarillo)&order=color_semaforo.asc&limit=50`, { headers }),
+        ])
         const [sData, mData, cData] = await Promise.all([sRes.json(), mRes.json(), cRes.json()])
         if (sData[0]) setStats(sData[0])
         setMunicipios(mData)
