@@ -4,7 +4,7 @@ import type { ClaseDano, ClasificacionResult, ColorSemaforo } from '@/types'
 const HF_API = 'https://api-inference.huggingface.co/models/'
 // Modelo de visión para clasificación de daño estructural
 // Puedes reemplazar con un fine-tuned específico para daño post-sismo
-const MODEL  = 'google/vit-base-patch16-224'
+const MODEL  = 'keremberke/satellite-building-segmentation'
 
 interface HFResponse {
   label: string
