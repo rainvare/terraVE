@@ -46,7 +46,7 @@ export default function SatelitalPageClient() {
           </span>
           <div className="ml-auto flex items-center gap-3">
             <span className="text-white/30 hidden sm:inline">📡 Sentinel-1 · 25 jun 2026</span>
-            <a>
+            <a
               href="https://www.arcgis.com/home/webscene/viewer.html?webscene=c01ef4b6b74b4d25a39f7a1e4865be58"
               target="_blank"
               rel="noopener noreferrer"
